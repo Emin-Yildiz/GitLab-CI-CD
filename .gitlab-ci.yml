@@ -1,0 +1,99 @@
+default:
+  image: 'ruby:2.4'
+  before_script:
+    - echo Hello World
+
+variables:
+  DOMAIN: example.com
+  WEBHOOK_URL: https://my-webhook.example.com
+
+stages:
+  - test
+  - build
+  - publish
+  - deploy
+
+.build-image:
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint:
+      - ""
+  stage: build
+  variables:
+    CI_REGISTRY: $CI_REGISTRY
+    CI_REGISTRY_USER: $CI_REGISTRY_USER
+    CI_REGISTRY_PASSWORD: $CI_REGISTRY_PASSWORD
+    CI_REGISTRY_MAIL: $CI_REGISTRY_MAIL
+    CI_REGISTRY_PROJECT: $CI_REGISTRY_PROJECT
+    CI_PROJECT_DIR: $CI_PROJECT_DIR
+    CI_PROJECT_TAG: $CI_PROJECT_TAG
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"${CI_REGISTRY_USER}\",\"password\":\"${CI_REGISTRY_PASSWORD}\",\"email\":\"${CI_REGISTRY_MAIL}\",\"auth\":\"\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor --context . --destination ${CI_REGISTRY}/${CI_REGISTRY_USER}/${CI_REGISTRY_PROJECT}:${CI_PROJECT_TAG}
+
+build-image-and-push:
+  extends: .build-image
+  variables:
+    DOCKERFILE: ${CI_PROJECT_DIR}/
+    CI_REGISTRY_SUB_PROJECT: $CI_REGISTRY_PROJECT
+  stage: build
+
+
+
+javatest 1/3:
+  stage: test
+  inherit:
+    default: [image]
+    variables: [DOMAIN]
+  script:
+    - echo "javatest"
+
+javatest 2/3:
+  stage: test
+  script:
+    - echo "javatest"
+
+javatest 3/3:
+  stage: test
+  script:
+    - echo "javatest"
+
+gotest:
+  stage: test
+  script:
+    - echo "gotest"
+
+javabuild:
+  stage: build
+  script:
+    - echo "javabuild"
+
+gobuild:
+  stage: build
+  script:
+    - echo "gobuild"
+
+javapublish:
+  stage: publish
+  script:
+    - echo "javapublish"
+
+javadeploy:
+  stage: deploy
+  script:
+    - echo "javadeploy"
+
+.hidden-job:
+  stage: hidden
+  script:
+    - echo "hidden job script"
+
+rules-job:
+  script: echo "rules-job"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: never
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - when: on_success
